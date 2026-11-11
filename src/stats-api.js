@@ -22,6 +22,9 @@ resetConnected();
 const imgCache = {};
 
 const saveSettings = () => store.set('kv', 'settings', settings);
+// Keeping a copy of the logs and the periodic snapshots (in this browser only) is ON unless it has been switched off
+const archiveOn = () => settings.archive !== false;
+const snapsOn = () => settings.snapshots !== false;
 const isLogName = f => /^session-[\w-]+\.log$/.test(f);
 
 async function init() {
@@ -63,11 +66,11 @@ function notConnected(note) {
 // ---- one refresh: run the parser in rounds until it has everything it asked for, then do the bookkeeping the desktop app's main process does ----
 async function snapshot() {
   await vfs.revalidate();
-  vfs.mount('/__archive/logs', settings.archive ? await archivedLogs() : null);
+  vfs.mount('/__archive/logs', archiveOn() ? await archivedLogs() : null);
   let data = null;
   for (let i = 0; i < 12; i++) {
     vfs.beginPass();
-    data = load('/game', settings.archive ? '/__archive/logs' : null);
+    data = load('/game', archiveOn() ? '/__archive/logs' : null);
     try { fsShim.statSync('/game/Platinum.exe'); } catch {}
     try { fsShim.readFileSync('/game/world-name.txt', 'utf8'); } catch {}
     if (!vfs.hasMisses()) break;
@@ -82,13 +85,13 @@ const activeWorld = () => { try { return fsShim.readFileSync('/game/world-name.t
 
 async function finish(data) {
   if (data.missing) return { ...data, gameDir: backend.name, web: { state: 'wrong-folder', folder: backend.name, supported } };
-  if (settings.archive) await archiveLogs();
+  if (archiveOn()) await archiveLogs();
   const tags = settings.tags || (settings.tags = {});
   const live = data.sessions.reduce((a, s) => (!a || s.mtimeMs > a.mtimeMs ? s : a), null);
   const world = activeWorld();
   if (live && world && !tags[live.file] && Date.now() - live.mtimeMs < 120000) { tags[live.file] = world; saveSettings(); }
   const rel = trackReleased(data), itemsEver = trackItems(data);
-  if (settings.snapshots) await snapshotArchive(data);
+  if (snapsOn()) await snapshotArchive(data);
   if (wiki) wiki.tick();
   if (data.worldCard) lastCard[world] = data.worldCard;
   else data.worldCard = lastCard[world] || cardFromSave(data, world);
@@ -131,7 +134,7 @@ async function snapshotArchive(data) {
 }
 async function archiveInfo() {
   const meta = (await store.get('kv', 'logmeta')) || {}, snaps = (await store.get('kv', 'snapshots')) || [];
-  return { on: !!settings.archive, count: Object.keys(meta).length, bytes: Object.values(meta).reduce((a, b) => a + b, 0), snapsOn: !!settings.snapshots, snaps: snaps.length, snapBytes: snaps.reduce((a, s) => a + s.length, 0) };
+  return { on: archiveOn(), count: Object.keys(meta).length, bytes: Object.values(meta).reduce((a, b) => a + b, 0), snapsOn: snapsOn(), snaps: snaps.length, snapBytes: snaps.reduce((a, s) => a + s.length, 0) };
 }
 
 // ---- remembering which Pokémon and items have been seen (the same rules as the desktop app) ----

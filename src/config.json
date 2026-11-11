@@ -2,5 +2,6 @@
   "repo": "https://github.com/theonlygenie/platinum-together-stat-tracker",
   "releases": "https://github.com/theonlygenie/platinum-together-stat-tracker/releases",
   "issues": "https://github.com/theonlygenie/platinum-together-stat-tracker/issues/new/choose",
-  "wiki": "https://platinumtogether.online/wiki"
+  "wiki": "https://platinumtogether.online/wiki",
+  "siteUrl": "https://journalpt.vercel.app"
 }

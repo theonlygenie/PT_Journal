@@ -5,7 +5,7 @@ points it at their Platinum Together game folder once, and sees their stats. It 
 grid backdrop from the units.gr reference behind the content panel, and a stepped pixel wipe (in the colour of the page you are going to, with a
 pixel Poké Ball in the middle) when you switch page. The look is in `src/web-skin.css` and `src/web-skin.js`; the cards and charts are the app's own.
 
-Settings is a section of its own in the rail (06), with the game folder, the optional log copy, wiki data, theme, motion and a link to the Windows app, as cards. Every section in the rail opens from its beginning (its first sub-page, scrolled to the top).
+Settings is a section of its own in the rail (06), with the game folder, the log copy (on by default, in this browser only; switch it off in Settings), wiki data, theme, motion and a link to the Windows app, as cards. Every section in the rail opens from its beginning (its first sub-page, scrolled to the top).
 
 (An earlier scrolling landing page, built to lead people to the app, is kept in `src/landing/` but is no longer built.)
 
@@ -43,7 +43,7 @@ The website is the desktop app's own pages (`shared/renderer`) plus a browser st
 - `src/fs-shim.js` is a small stand-in for Node's `fs` so the desktop app's **unchanged parser** runs in the browser. It only has read functions.
   The parser runs in rounds: whatever it asks for that isn't loaded yet is fetched, then it runs again until nothing new is asked for.
 - `src/stats-api.js` is the browser version of the desktop app's `preload.js` / `main.js` (`window.stats`): the same functions, answered here.
-  Settings, the memory of released Pokémon and items, map labels, custom names and the optional log copy live in the browser's IndexedDB.
+  Settings, the memory of released Pokémon and items, map labels, custom names and the log copy (on by default, in this browser only; switch it off in Settings) live in the browser's IndexedDB.
 - `src/wiki.js` keeps the wiki spawn tables fresh (the browser version of the desktop updater): one public file from
   `platinumtogether.online`, nothing about the player sent, can be switched off in Settings.
 - `src/web-setup.js` is the first-run and "welcome back" screen.

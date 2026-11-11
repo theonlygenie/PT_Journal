@@ -52,6 +52,22 @@ html = must(html, '<p id="folder"></p>', '<p id="folder"></p>\n        <p id="re
 html = must(html, '<button class="pill ghost" id="pick">Game folder</button>', '<button class="pill ghost" id="pick">Game folder</button>');
 // the app's own icon (the Poké Ball with PT) as the tab icon, the home-screen icon, and for every size the browser may ask for
 html = must(html, '<title>PT Journal</title>', '<title>PT Journal</title>\n<link rel="icon" href="favicon.ico" sizes="any">\n<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">');
+const siteCfg = JSON.parse(fs.readFileSync(path.join(src, 'config.json'), 'utf8'));
+// what a pasted link shows in Discord, Slack, Messages and so on: a title, a line, and a picture (og.png, 1200x630)
+const title = 'PT Journal – your way of playing Platinum Together';
+const blurb = 'A free journal of how you play: shiny luck, IVs, balls, your Pokédex and map, worked out from your own game. Nothing is uploaded.';
+const alt = 'PT Journal: your way of playing. A grid page with the stats screen of the app.';
+const share = [
+  ['meta', { name: 'description', content: blurb }], ['meta', { name: 'theme-color', content: '#ffb200' }],
+  ['meta', { property: 'og:type', content: 'website' }], ['meta', { property: 'og:site_name', content: 'PT Journal' }],
+  ['meta', { property: 'og:title', content: title }], ['meta', { property: 'og:description', content: blurb }],
+  ['meta', { property: 'og:url', content: siteCfg.siteUrl + '/' }], ['meta', { property: 'og:image', content: siteCfg.siteUrl + '/og.png' }],
+  ['meta', { property: 'og:image:width', content: '1200' }], ['meta', { property: 'og:image:height', content: '630' }], ['meta', { property: 'og:image:alt', content: alt }],
+  ['meta', { name: 'twitter:card', content: 'summary_large_image' }], ['meta', { name: 'twitter:title', content: title }],
+  ['meta', { name: 'twitter:description', content: blurb }], ['meta', { name: 'twitter:image', content: siteCfg.siteUrl + '/og.png' }],
+].map(([t, a]) => '<' + t + ' ' + Object.entries(a).map(([k, v]) => k + '="' + v.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"').join(' ') + '>').join('\n');
+html = must(html, '<link rel="apple-touch-icon" href="apple-touch-icon.png">', '<link rel="apple-touch-icon" href="apple-touch-icon.png">\n' + share);
+fs.copyFileSync(path.join(src, 'og', 'og.png'), path.join(site, 'og.png'));
 for (const f of fs.readdirSync(path.join(src, 'favicon'))) fs.copyFileSync(path.join(src, 'favicon', f), path.join(site, f));
 fs.writeFileSync(path.join(site, 'index.html'), html);
 
