@@ -50,6 +50,9 @@ html = must(html, 'title="Theme, motion, archive and what this app reads"', 'tit
 html = must(html, '<h4>Game folder</h4>', '<h4>Connected folder</h4>');
 html = must(html, '<p id="folder"></p>', '<p id="folder"></p>\n        <p id="readerrs"></p>');
 html = must(html, '<button class="pill ghost" id="pick">Game folder</button>', '<button class="pill ghost" id="pick">Game folder</button>');
+// the app's own icon (the Poké Ball with PT) as the tab icon, the home-screen icon, and for every size the browser may ask for
+html = must(html, '<title>PT Journal</title>', '<title>PT Journal</title>\n<link rel="icon" href="favicon.ico" sizes="any">\n<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">');
+for (const f of fs.readdirSync(path.join(src, 'favicon'))) fs.copyFileSync(path.join(src, 'favicon', f), path.join(site, f));
 fs.writeFileSync(path.join(site, 'index.html'), html);
 
 // 3. the page that goes with the web script, and the data the pages need
