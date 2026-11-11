@@ -1,0 +1,56 @@
+/* The website's look, on top of the app's own pages: the grid backdrop of the reference (units.gr), with the app's content sitting on it as one
+   rounded panel. Only the frame changes; the cards and charts are exactly the app's. */
+:root{--gridline:#00000022}
+html.themed{--gridline:color-mix(in srgb,var(--ink) 16%,transparent)}
+.stage{
+  position:relative;border-radius:34px;padding:14px 14px 0;
+  background-color:color-mix(in srgb,var(--page) 92%,#000);
+  background-image:linear-gradient(var(--gridline) 1.5px,transparent 1.5px),linear-gradient(90deg,var(--gridline) 1.5px,transparent 1.5px);
+  background-size:48px 48px;background-position:-1px -1px;
+}
+html.themed .stage{background-color:color-mix(in srgb,var(--page) 94%,var(--ink))}
+main#view{padding-right:6px}
+/* the pixel wipe that plays when you change page */
+#pxwipe{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;pointer-events:none;z-index:60}
+@media (max-width:900px){.stage{padding:10px 10px 0;border-radius:26px;background-size:36px 36px}}
+
+/* ---- breathing room under the last block, so it never touches the edge of the grid panel ---- */
+.stage{padding-bottom:14px}
+main#view{padding-bottom:26px}
+
+/* ---- the blocks come into view quickly and quietly: a short rise and fade, no stagger, no scale ---- */
+.fx{transform:translateY(16px);transition:opacity .4s ease,transform .5s var(--ease);transition-delay:0ms!important}
+.fx.fx-in{transform:none}
+
+/* ---- hover on the tiles: no shine sweep and no colour boost; the number still grows ---- */
+.tile::after{content:none!important;display:none!important}
+.stat:hover,.world:hover,.pending:hover{filter:none}
+
+/* ---- Settings is a section of its own in the rail, with its own page ---- */
+#info,#infopanel{display:none!important}
+.rail nav#tabs button[data-tab=settings]{--c:#161412;color:#f4e9e1}
+html.themed .rail nav#tabs button[data-tab=settings]{--c:var(--deep);color:var(--ink)}
+.on-settings #view,.on-settings #worldbar{display:none}
+#setpage{display:none;min-height:0;overflow:auto;padding:2px 6px 26px 2px;scrollbar-width:thin}
+.on-settings #setpage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);align-items:start}
+.setcol{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
+#setpage .setcard{padding:28px 30px 30px;min-width:0}
+#setpage .setcard h3{margin:0 0 14px;font-family:var(--display);font-weight:900;font-size:clamp(22px,2.2vw,30px);letter-spacing:-.03em;line-height:1.05}
+#setpage p{margin:0 0 4px;font-size:15px;line-height:1.5;font-weight:500;overflow-wrap:anywhere}
+#setpage .pill,#setpage a.pill{display:inline-block;width:auto!important;margin:12px 8px 0 0;padding:7px 20px;font-size:15px;text-decoration:none}
+#setpage .pill + p,#setpage .wikibtns + p,#setpage p + .pill{margin-top:12px}
+#setpage .themebtns,#setpage .wikibtns{margin:4px 0 8px}
+#setpage .setcard{overflow:visible}
+#setpage #readerrs:empty{display:none}
+#setpage #readerrs{margin-top:10px;font-size:13px}
+#setpage #readerrs summary{cursor:pointer;font-weight:700;opacity:.85}
+#setpage .readerrs-list{margin-top:8px;max-height:110px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.4;opacity:.8;border-radius:12px;background:#0000000d;padding:8px 10px}
+@media (max-width:900px){.on-settings #setpage{grid-template-columns:1fr}}
+
+/* the stage is a grid of rows (world chips, ticker, page): say which row each belongs to, so hiding one never moves the others */
+.stage > #worldbar{grid-row:1}
+.stage > .ticker{grid-row:2}
+.stage > #view,.stage > #setpage{grid-row:3}
+
+/* the numbers grow on hover and settle back smoothly: the app's own easing overshoots, which looked like a jump when the pointer left */
+.tile h3,.stat .num{transition:transform .5s var(--ease)}

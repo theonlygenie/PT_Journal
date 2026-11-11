@@ -1,0 +1,19 @@
+{
+  "name": "pt-journal-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PT Journal in the browser: reads your Platinum Together game folder locally, nothing is uploaded",
+  "scripts": {
+    "sync": "node scripts/sync.js",
+    "build": "node scripts/build.js",
+    "serve": "node scripts/serve.js",
+    "test": "node test/run-harness.js"
+  },
+  "devDependencies": {
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.1.0",
+    "buffer": "^6.0.3",
+    "esbuild": "^0.28.2",
+    "path-browserify": "^1.0.1"
+  }
+}
