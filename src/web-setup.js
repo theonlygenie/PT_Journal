@@ -63,12 +63,13 @@ render = function () {
   document.body.classList.toggle('demo', on);
   let tag = document.getElementById('demotag');
   if (on && !tag) {
-    tag = el('div', { id: 'demotag', class: 'demotag', role: 'status' },
+    // two short lines, so it still fits under the tabs in a short window; the longer note is in its tooltip and for screen readers
+    tag = el('div', { id: 'demotag', class: 'demotag', role: 'status', title: 'Sample data: a real game, shown read-only. Not your own.', ariaLabel: 'Sample data: a real game, shown read-only. Not your own.' },
       el('span', { class: 'dot', ariaHidden: 'true' }), el('b', {}, 'Sample data'),
-      el('span', {}, 'A real game, shown read-only. Not your own.'),
       el('a', { href: location.pathname, title: 'Leave the sample and connect your own game folder' }, 'Use my own folder'));
-    const rail = document.querySelector('.rail .actions') || document.querySelector('.rail');
-    if (rail) rail.before(tag);
+    // right under the name at the top of the rail: always in view, and the tabs below can never cover it in a short window
+    const brand = document.querySelector('.rail .brand');
+    if (brand) brand.after(tag); else document.body.prepend(tag);
   } else if (!on && tag) tag.remove();
   for (const id of ['archbtn', 'snapbtn', 'wikibtn', 'wikicheck']) { const b = document.getElementById(id); if (b) { b.disabled = on || (id === 'wikicheck' && b.textContent === 'Checking…'); b.title = on ? 'Not available with the sample data' : ''; } }
   const pick = document.getElementById('pick');
