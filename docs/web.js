@@ -3621,6 +3621,44 @@
   };
   resetConnected();
   var imgCache = {};
+  var demoInUrl = (() => {
+    try {
+      const p = new URLSearchParams(location.search);
+      return p.has("demo") && !/^(0|false|no|off)$/i.test(p.get("demo"));
+    } catch {
+      return false;
+    }
+  })();
+  var demo = demoInUrl;
+  var demoData = null;
+  var demoMap = null;
+  var demoUrl = (name3) => new URL("demo/" + name3, location.href).href;
+  async function demoLoad() {
+    if (!demoData) {
+      const res = await fetch(demoUrl("sample.json"), { cache: "no-cache" });
+      if (!res.ok) throw new Error("the sample data did not load (" + res.status + ")");
+      demoData = await res.json();
+    }
+    const d = demoData;
+    return { ...d, speciesNames: { ...speciesNames, ...d.customNames }, spawns: wiki_spawns_default, web: { state: "ok", folder: "Sample data", supported, demo: true, errors: [] } };
+  }
+  var setDemoUrl = (on) => {
+    try {
+      const u = new URL(location.href);
+      if (on) u.searchParams.set("demo", "1");
+      else u.searchParams.delete("demo");
+      history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+    } catch {
+    }
+  };
+  var demoArchive = { on: false, count: 0, bytes: 0, snapsOn: false, snaps: 0, snapBytes: 0, demo: true };
+  var endDemo = () => {
+    if (!demo) return;
+    demo = false;
+    setDemoUrl(false);
+    for (const k of Object.keys(imgCache)) delete imgCache[k];
+    if (!backend) resetConnected();
+  };
   var saveSettings = () => set("kv", "settings", settings);
   var archiveOn = () => settings.archive !== false;
   var snapsOn = () => settings.snapshots !== false;
@@ -3861,11 +3899,11 @@
     return itemsLed;
   }
   async function dataUrl(name3) {
-    await connected;
+    if (!demo) await connected;
     if (name3 in imgCache) return imgCache[name3];
     let out = null;
     try {
-      const f = await vfs2.readBlob([name3]);
+      const f = demo ? await fetch(demoUrl(name3)).then((r) => r.ok ? r.blob() : null) : await vfs2.readBlob([name3]);
       if (f) {
         const blob = f instanceof Blob ? f : new Blob([await f.arrayBuffer()], { type: "image/png" });
         out = await new Promise((res) => {
@@ -3911,6 +3949,7 @@
       if (inflight) return inflight;
       inflight = (async () => {
         await init();
+        if (demo) return await demoLoad();
         if (!backend) return notConnected();
         if (backend.kind === "handle") {
           let perm = "denied";
@@ -3943,6 +3982,7 @@
     },
     // Chrome and Edge: the folder picker, remembered for next time. Other browsers: a plain "choose a folder" box (not remembered).
     async pick() {
+      endDemo();
       if (supported) {
         let h = null;
         try {
@@ -3969,6 +4009,7 @@
     },
     // the folder is remembered but the browser wants a click before it will read it again
     async reconnect() {
+      endDemo();
       let perm = "denied", why = "";
       const t0 = performance.now();
       if (handle) {
@@ -3994,8 +4035,33 @@
       } else lastNote = "The browser did not give permission" + (perm ? " (it said: " + perm + ")" : "") + (why ? ". " + why : "") + ". Press Reconnect again and choose Allow, or choose the folder again.";
       return api.load();
     },
+    // the sample data instead of a folder (the "Try with sample data" button); the address gets ?demo=1 so a reload keeps it
+    async demo() {
+      await init();
+      if (inflight) await inflight.catch(() => {
+      });
+      demo = true;
+      setDemoUrl(true);
+      connect_();
+      try {
+        return await api.load();
+      } catch (e) {
+        demo = false;
+        setDemoUrl(false);
+        lastNote = "Could not open the sample data: " + String(e && e.message || e);
+        return notConnected(lastNote);
+      }
+    },
+    isDemo: () => demo,
     async tag(file, world) {
       await init();
+      if (demo) {
+        if (typeof file === "string" && demoData) {
+          if (typeof world === "string" && world && world.length <= 60) demoData.tags[file] = world;
+          else delete demoData.tags[file];
+        }
+        return;
+      }
       if (typeof file !== "string" || !isLogName(file)) return;
       settings.tags = settings.tags || {};
       if (typeof world === "string" && world && world.length <= 60) settings.tags[file] = world;
@@ -4004,6 +4070,12 @@
     },
     async tagMany(files, world) {
       await init();
+      if (demo) {
+        if (Array.isArray(files) && typeof world === "string" && world && world.length <= 60 && demoData) {
+          for (const f of files) if (typeof f === "string") demoData.tags[f] = world;
+        }
+        return;
+      }
       if (!Array.isArray(files) || typeof world !== "string" || !world || world.length > 60) return;
       settings.tags = settings.tags || {};
       for (const f of files) if (typeof f === "string" && isLogName(f)) settings.tags[f] = world;
@@ -4011,10 +4083,11 @@
     },
     async archiveGet() {
       await init();
-      return archiveInfo();
+      return demo ? demoArchive : archiveInfo();
     },
     async archiveSet(which, on) {
       await init();
+      if (demo) return demoArchive;
       settings[which === "snapshots" ? "snapshots" : "archive"] = on === true;
       await saveSettings();
       return archiveInfo();
@@ -4025,10 +4098,12 @@
     },
     async wikiCheck() {
       await init();
+      if (demo) return wiki.status();
       return wiki.check({ force: true });
     },
     async wikiSet(on) {
       await init();
+      if (demo) return wiki.status();
       settings.wikiAuto = on === true;
       await saveSettings();
       return wiki.status();
@@ -4039,18 +4114,30 @@
     townMap: () => dataUrl("town-map.png"),
     async mapLoad() {
       await init();
+      if (demo) return demoMap;
       return await get("kv", "maplabels") || null;
     },
     async mapSave(assign) {
       if (!assign || typeof assign !== "object") return;
       const clean = {};
       for (const [key, place] of Object.entries(assign).slice(0, 600)) if (/^\d{1,3},\d{1,3}$/.test(key) && Number.isInteger(place) && place >= 0 && place < 1e4) clean[key] = place;
+      if (demo) {
+        demoMap = { assign: clean };
+        return;
+      }
       await set("kv", "maplabels", { assign: clean });
     },
     async nameSpecies(id, name3) {
       await init();
       if (!/^\d{1,4}$/.test(String(id)) || +id <= 493 || typeof name3 !== "string") return;
       const clean = name3.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 40);
+      if (demo) {
+        if (demoData) {
+          if (clean) demoData.customNames[String(id)] = clean;
+          else delete demoData.customNames[String(id)];
+        }
+        return;
+      }
       if (clean) custom[String(id)] = clean;
       else delete custom[String(id)];
       await set("kv", "names", custom);

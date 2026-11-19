@@ -82,6 +82,12 @@ let fxText = must(fs.readFileSync(fxFile, 'utf8'), "rootMargin: '0px' }", "rootM
 // the wheel smoothing keeps its own target, so a page switch while it was still easing dragged the new page back down to the old position; this lets a page switch reset it
 fxText = must(fxText, "view.addEventListener('scroll', () => { if (!raf) target = view.scrollTop; });", "view.addEventListener('scroll', () => { if (!raf) target = view.scrollTop; });\n  view.addEventListener('pt-reset-scroll', () => { if (raf) { cancelAnimationFrame(raf); raf = 0; } target = 0; view.scrollTop = 0; });");
 fs.writeFileSync(fxFile, fxText);
+// the sample game for the demo (?demo=1): made by scripts/make-demo.js, read by src/stats-api.js
+const demoSrc = path.join(src, 'demo');
+if (fs.existsSync(demoSrc)) {
+  fs.mkdirSync(path.join(site, 'demo'), { recursive: true });
+  for (const f of fs.readdirSync(demoSrc)) fs.copyFileSync(path.join(demoSrc, f), path.join(site, 'demo', f));
+}
 fs.writeFileSync(path.join(docs, '.nojekyll'), '');
 
 console.log('built docs/ (the app, with the website skin)');

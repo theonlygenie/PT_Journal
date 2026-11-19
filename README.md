@@ -27,6 +27,22 @@ On Windows, Chrome refuses to hand out `.ini` files (world.ini, world-card.ini, 
 
 The browser refuses a few folders as a pick (Desktop, Documents or Downloads themselves), but a game folder inside one of them is fine.
 
+## The demo (sample data)
+
+For people without the game: **Try with sample data** on the first screen, or a link straight to it: <https://journalpt.vercel.app/?demo=1>.
+It shows every page filled in from one real game, read-only. A small **Sample data** label sits in the rail with a link back to the visitor's own
+folder, and choosing a folder ends the demo. While it is on, nothing is read from the visitor's PC and nothing is written to the browser's storage
+(map labels, names and tags changed in the demo last until the page is closed).
+
+The sample is `src/demo/sample.json` (the parser's output for one game folder, with the folder path and all trainer names replaced) plus the
+game's four picture sheets, so the icons and the town map show. To make a new one from your own game:
+
+```
+node scripts/make-demo.js "C:path	oGame" "%APPDATA%pt-journal"
+```
+
+(The second folder is the desktop app's settings folder; it is optional and adds archived sessions and the released / items memory.)
+
 ## What is in this folder
 
 ```

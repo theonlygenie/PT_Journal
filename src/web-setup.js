@@ -26,7 +26,8 @@ setupGuide = function webSetupGuide() {
   return el('div', { class: 'setup' },
     el('section', { class: 'tile c-navy setuphead' },
       el('h2', {}, 'Welcome'),
-      el('p', {}, 'Let’s connect this page to your game. It takes about ten seconds. Your files are read right here in your browser. Nothing is uploaded, and the page only ever reads, it never changes your game.')),
+      el('p', {}, 'Let’s connect this page to your game. It takes about ten seconds. Your files are read right here in your browser. Nothing is uploaded, and the page only ever reads, it never changes your game.'),
+      demoOffer()),
     el('section', { class: 'tile c-grey setupsteps' },
       el('ol', {},
         step(1, 'Find your game folder', el('p', {}, 'It is the folder you start the game from. Look for the one with ', el('b', {}, 'Platinum.exe'), ' inside. It is usually called ', el('b', {}, 'Game'), ' and sits inside your Platinum Together folder.')),
@@ -44,6 +45,39 @@ setupGuide = function webSetupGuide() {
         el('p', {}, `The page looked in “${w.folder}” and expected to find these:`),
         el('ul', {}, check(f.exe, 'Platinum.exe'), check(f.logs, 'logs folder'), check(f.save, 'save.bin'), check(f.worlds, 'worlds folder')),
         el('p', {}, 'Play the game once so it makes its logs, or pick the folder that holds Platinum.exe.')) : null));
+};
+
+// No game to hand (or just looking)? Show the whole journal filled in from a sample game instead. It never touches the visitor's own folder.
+function demoOffer() {
+  return el('div', { class: 'demooffer' },
+    el('p', {}, 'No game folder to hand? See every page filled in with a sample from a real game.'),
+    el('button', { class: 'pill', onclick: () => refresh(window.stats.demo) }, 'Try with sample data'));
+}
+
+// While the sample data is shown: a small label in the rail that says so, with a way back to the visitor's own folder,
+// and the Settings that would change something greyed out (the demo is read-only: it keeps nothing).
+const renderWithoutDemo = render;
+render = function () {
+  renderWithoutDemo();
+  const on = !!(data && data.web && data.web.demo);
+  document.body.classList.toggle('demo', on);
+  let tag = document.getElementById('demotag');
+  if (on && !tag) {
+    tag = el('div', { id: 'demotag', class: 'demotag', role: 'status' },
+      el('span', { class: 'dot', ariaHidden: 'true' }), el('b', {}, 'Sample data'),
+      el('span', {}, 'A real game, shown read-only. Not your own.'),
+      el('a', { href: location.pathname, title: 'Leave the sample and connect your own game folder' }, 'Use my own folder'));
+    const rail = document.querySelector('.rail .actions') || document.querySelector('.rail');
+    if (rail) rail.before(tag);
+  } else if (!on && tag) tag.remove();
+  for (const id of ['archbtn', 'snapbtn', 'wikibtn', 'wikicheck']) { const b = document.getElementById(id); if (b) { b.disabled = on || (id === 'wikicheck' && b.textContent === 'Checking…'); b.title = on ? 'Not available with the sample data' : ''; } }
+  const pick = document.getElementById('pick');
+  if (pick && pick.dataset.label == null) pick.dataset.label = pick.textContent;
+  if (pick) pick.textContent = on ? 'Use my own folder' : pick.dataset.label;
+  if (on) {
+    const an = document.getElementById('archnote');
+    if (an) an.textContent = 'The sample data is read-only, so nothing is kept in this browser while it is shown.';
+  }
 };
 
 // Settings panel: say, briefly, which files could not be read (if any), with the details folded away

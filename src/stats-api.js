@@ -21,6 +21,32 @@ const resetConnected = () => { connected = new Promise(r => { connect_ = r; }); 
 resetConnected();
 const imgCache = {};
 
+// ---- the demo: a sample game (docs/demo/sample.json, made by scripts/make-demo.js) shown instead of a folder, for people without the game ----
+// Turned on by ?demo=1 or the "Try with sample data" button. Nothing is read from the player's PC and nothing is written to the browser's
+// storage while it is on: map labels, names and tags changed in the demo only last until the page is closed.
+const demoInUrl = (() => { try { const p = new URLSearchParams(location.search); return p.has('demo') && !/^(0|false|no|off)$/i.test(p.get('demo')); } catch { return false; } })();
+let demo = demoInUrl, demoData = null, demoMap = null;
+const demoUrl = name => new URL('demo/' + name, location.href).href;
+async function demoLoad() {
+  if (!demoData) {
+    const res = await fetch(demoUrl('sample.json'), { cache: 'no-cache' });
+    if (!res.ok) throw new Error('the sample data did not load (' + res.status + ')');
+    demoData = await res.json();
+  }
+  const d = demoData;
+  return { ...d, speciesNames: { ...speciesNames, ...d.customNames }, spawns: shippedTables, web: { state: 'ok', folder: 'Sample data', supported, demo: true, errors: [] } };
+}
+const setDemoUrl = on => {
+  try {
+    const u = new URL(location.href);
+    if (on) u.searchParams.set('demo', '1'); else u.searchParams.delete('demo');
+    history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+  } catch {}
+};
+// choosing a real folder ends the demo
+const demoArchive = { on: false, count: 0, bytes: 0, snapsOn: false, snaps: 0, snapBytes: 0, demo: true };
+const endDemo = () => { if (!demo) return; demo = false; setDemoUrl(false); for (const k of Object.keys(imgCache)) delete imgCache[k]; if (!backend) resetConnected(); };
+
 const saveSettings = () => store.set('kv', 'settings', settings);
 // Keeping a copy of the logs and the periodic snapshots (in this browser only) is ON unless it has been switched off
 const archiveOn = () => settings.archive !== false;
@@ -197,11 +223,11 @@ function trackItems(data) {
 
 // ---- images from the game folder (read, never copied), handed to the page as data URLs ----
 async function dataUrl(name) {
-  await connected;
+  if (!demo) await connected;
   if (name in imgCache) return imgCache[name];
   let out = null;
   try {
-    const f = await vfs.readBlob([name]);
+    const f = demo ? await fetch(demoUrl(name)).then(r => (r.ok ? r.blob() : null)) : await vfs.readBlob([name]);
     if (f) {
       const blob = f instanceof Blob ? f : new Blob([await f.arrayBuffer()], { type: 'image/png' });
       out = await new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).replace(/^data:[^;,]*/, 'data:image/png')); r.onerror = () => res(null); r.readAsDataURL(blob); });
@@ -232,6 +258,7 @@ const api = {
     if (inflight) return inflight;
     inflight = (async () => {
       await init();
+      if (demo) return await demoLoad();
       if (!backend) return notConnected();
       if (backend.kind === 'handle') {
         let perm = 'denied'; try { perm = await handle.queryPermission({ mode: 'read' }); } catch {}
@@ -249,6 +276,7 @@ const api = {
   },
   // Chrome and Edge: the folder picker, remembered for next time. Other browsers: a plain "choose a folder" box (not remembered).
   async pick() {
+    endDemo();
     if (supported) {
       let h = null;
       try { h = await window.showDirectoryPicker({ id: 'pt-journal', mode: 'read' }); } catch (e) { if (e && e.name !== 'AbortError') console.warn(e); }
@@ -267,6 +295,7 @@ const api = {
   },
   // the folder is remembered but the browser wants a click before it will read it again
   async reconnect() {
+    endDemo();
     let perm = 'denied', why = '';
     const t0 = performance.now();
     if (handle) { try { perm = await handle.requestPermission({ mode: 'read' }); } catch (e) { why = String((e && e.message) || e); } }
@@ -283,28 +312,39 @@ const api = {
     } else lastNote = 'The browser did not give permission' + (perm ? ' (it said: ' + perm + ')' : '') + (why ? '. ' + why : '') + '. Press Reconnect again and choose Allow, or choose the folder again.';
     return api.load();
   },
-  async tag(file, world) { await init(); if (typeof file !== 'string' || !isLogName(file)) return; settings.tags = settings.tags || {}; if (typeof world === 'string' && world && world.length <= 60) settings.tags[file] = world; else delete settings.tags[file]; saveSettings(); },
-  async tagMany(files, world) { await init(); if (!Array.isArray(files) || typeof world !== 'string' || !world || world.length > 60) return; settings.tags = settings.tags || {}; for (const f of files) if (typeof f === 'string' && isLogName(f)) settings.tags[f] = world; saveSettings(); },
-  async archiveGet() { await init(); return archiveInfo(); },
-  async archiveSet(which, on) { await init(); settings[which === 'snapshots' ? 'snapshots' : 'archive'] = on === true; await saveSettings(); return archiveInfo(); },
+  // the sample data instead of a folder (the "Try with sample data" button); the address gets ?demo=1 so a reload keeps it
+  async demo() {
+    await init();
+    if (inflight) await inflight.catch(() => {});
+    demo = true; setDemoUrl(true); connect_();
+    try { return await api.load(); }
+    catch (e) { demo = false; setDemoUrl(false); lastNote = 'Could not open the sample data: ' + String((e && e.message) || e); return notConnected(lastNote); }
+  },
+  isDemo: () => demo,
+  async tag(file, world) { await init(); if (demo) { if (typeof file === 'string' && demoData) { if (typeof world === 'string' && world && world.length <= 60) demoData.tags[file] = world; else delete demoData.tags[file]; } return; } if (typeof file !== 'string' || !isLogName(file)) return; settings.tags = settings.tags || {}; if (typeof world === 'string' && world && world.length <= 60) settings.tags[file] = world; else delete settings.tags[file]; saveSettings(); },
+  async tagMany(files, world) { await init(); if (demo) { if (Array.isArray(files) && typeof world === 'string' && world && world.length <= 60 && demoData) for (const f of files) if (typeof f === 'string') demoData.tags[f] = world; return; } if (!Array.isArray(files) || typeof world !== 'string' || !world || world.length > 60) return; settings.tags = settings.tags || {}; for (const f of files) if (typeof f === 'string' && isLogName(f)) settings.tags[f] = world; saveSettings(); },
+  async archiveGet() { await init(); return demo ? demoArchive : archiveInfo(); },
+  async archiveSet(which, on) { await init(); if (demo) return demoArchive; settings[which === 'snapshots' ? 'snapshots' : 'archive'] = on === true; await saveSettings(); return archiveInfo(); },
   async wikiGet() { await init(); return wiki.status(); },
-  async wikiCheck() { await init(); return wiki.check({ force: true }); },
-  async wikiSet(on) { await init(); settings.wikiAuto = on === true; await saveSettings(); return wiki.status(); },
+  async wikiCheck() { await init(); if (demo) return wiki.status(); return wiki.check({ force: true }); },
+  async wikiSet(on) { await init(); if (demo) return wiki.status(); settings.wikiAuto = on === true; await saveSettings(); return wiki.status(); },
   icons: () => dataUrl('kit-mon-icons.png'),
   itemIcons: () => dataUrl('kit-item-icons.png'),
   shinyFronts: () => dataUrl('kit-mon-front-shiny.png'),
   townMap: () => dataUrl('town-map.png'),
-  async mapLoad() { await init(); return (await store.get('kv', 'maplabels')) || null; },
+  async mapLoad() { await init(); if (demo) return demoMap; return (await store.get('kv', 'maplabels')) || null; },
   async mapSave(assign) {
     if (!assign || typeof assign !== 'object') return;
     const clean = {};
     for (const [key, place] of Object.entries(assign).slice(0, 600)) if (/^\d{1,3},\d{1,3}$/.test(key) && Number.isInteger(place) && place >= 0 && place < 10000) clean[key] = place;
+    if (demo) { demoMap = { assign: clean }; return; }
     await store.set('kv', 'maplabels', { assign: clean });
   },
   async nameSpecies(id, name) {
     await init();
     if (!/^\d{1,4}$/.test(String(id)) || +id <= 493 || typeof name !== 'string') return;
     const clean = name.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 40);
+    if (demo) { if (demoData) { if (clean) demoData.customNames[String(id)] = clean; else delete demoData.customNames[String(id)]; } return; }
     if (clean) custom[String(id)] = clean; else delete custom[String(id)];
     await store.set('kv', 'names', custom);
   },

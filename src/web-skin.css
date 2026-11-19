@@ -54,3 +54,15 @@ html.themed .rail nav#tabs button[data-tab=settings]{--c:var(--deep);color:var(-
 
 /* the numbers grow on hover and settle back smoothly: the app's own easing overshoots, which looked like a jump when the pointer left */
 .tile h3,.stat .num{transition:transform .5s var(--ease)}
+
+/* ---- the demo (?demo=1): the offer on the first screen, and the quiet label in the rail while the sample data is shown ---- */
+.demooffer{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-top:20px;padding-top:18px;border-top:1.5px solid color-mix(in srgb,currentColor 28%,transparent)}
+.demooffer p{margin:0!important}
+.demotag{display:grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:3px;align-items:center;margin:0 0 12px;padding:10px 12px 11px;border-radius:14px;
+  border:1.5px solid color-mix(in srgb,var(--ink) 20%,transparent);background:color-mix(in srgb,var(--page) 70%,transparent);color:var(--ink);font-size:12px;line-height:1.35}
+.demotag .dot{width:8px;height:8px;border-radius:50%;background:#ffb200;box-shadow:0 0 0 3px color-mix(in srgb,#ffb200 25%,transparent)}
+.demotag b{font-size:13px;font-weight:800;letter-spacing:.01em}
+.demotag > span:not(.dot),.demotag > a{grid-column:2}
+.demotag > span:not(.dot){opacity:.75}
+.demotag a{color:inherit;font-weight:700;text-underline-offset:2px}
+body.demo #setpage button:disabled{opacity:.45;cursor:not-allowed}
